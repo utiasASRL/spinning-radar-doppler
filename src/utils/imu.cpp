@@ -57,7 +57,8 @@ double preintegrate_gyro(const std::vector<Eigen::Vector4d>& imu_measurements,
     }
 
     // Extract integrated yaw from final rotation
-    return lgmath::so3::rot2vec(C_y).z();
+    // Minus sign because lgmath returns xi_ab from C_ab
+    return -lgmath::so3::rot2vec(C_y).z();
 }
 
 Eigen::Vector4d get_imu_measurement(const std::vector<Eigen::Vector4d>& imu_measurements,

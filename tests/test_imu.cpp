@@ -72,7 +72,7 @@ TEST(IMUUtilsTest, PreintegrateImuComputesExpectedYaw) {
 
     double yaw_factor = preintegrate_gyro(imu, t0_us, t1_us);
     // Expected yaw change ≈ yaw_rate * dt = 0.1 * 3 = 0.3 rad
-    EXPECT_NEAR(yaw_factor, 0.04, 1e-3);
+    EXPECT_NEAR(yaw_factor, 0.3, 1e-3);
 }
 
 TEST(IMUUtilsTest, PreintegrateImuRejectsBadInputs) {
