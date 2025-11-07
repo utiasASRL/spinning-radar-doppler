@@ -1,10 +1,10 @@
-name: C/C++ CI
+name: Build and test
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "action_dev" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "action_dev" ]
 
 jobs:
   build:
@@ -13,10 +13,34 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    # Install dependencies (modify as needed)
     - name: Install dependencies
-      run: sudo apt-get update && sudo apt-get install -y \
-        build-essential cmake libeigen3-dev libopencv-dev libyaml-cpp-dev
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential \
+          cmake \
+          libeigen3-dev \
+          libopencv-dev \
+          libyaml-cpp-dev \
+          git \
+          libgtest-dev
+
+    - name: Install GoogleTest
+      run: |
+        cd /usr/src/googletest/googletest
+        sudo cmake .
+        sudo make
+        sudo cp lib/*.a /usr/lib/
+
+    - name: Clone and build lgmath
+      run: |
+        mkdir -p ~/workspace/lgmath
+        cd ~/workspace/lgmath
+        git clone https://github.com/utiasASRL/lgmath.git .
+        mkdir -p build && cd build
+        cmake ..
+        cmake --build . --parallel
+        sudo cmake --install .
 
     - name: Configure CMake
       run: cmake -S . -B build
