@@ -5,6 +5,7 @@
 #include <memory>
 #include <vector>
 #include "srd/common/common.hpp"
+#include <optional>
 
 namespace srd::extractor {
 
