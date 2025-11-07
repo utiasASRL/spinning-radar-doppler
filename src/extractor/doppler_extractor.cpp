@@ -1,0 +1,187 @@
+#include "srd/extractor/doppler_extractor.hpp"
+#include <opencv2/imgproc.hpp>
+#include <random>
+#include <numeric>
+#include <iostream>
+
+namespace srd::extractor {
+
+DopplerExtractor::DopplerExtractor() : options_() {}
+
+DopplerExtractor::DopplerExtractor(const Options& options) : options_(options) {}
+
+void DopplerExtractor::extract_doppler(
+    const cv::Mat& fft_data,
+    const std::vector<double>& azimuths,
+    const std::vector<int64_t>& timestamps,
+    const std::vector<bool>& chirps,
+    DopplerScan& doppler_scan) const {
+  
+  // --- Input validation ---
+  if (fft_data.empty()) {
+    throw std::invalid_argument("[extract_doppler] Empty FFT data.");
+  }
+  if (azimuths.size() != timestamps.size() || azimuths.size() != chirps.size()) {
+    throw std::invalid_argument("[extract_doppler] Input vectors must have equal size.");
+  }
+
+  const int N = fft_data.rows;
+  const int range_bins = fft_data.cols;
+
+  // --- Parameters ---
+  const double radar_res = options_.radar_res;
+  const double beta_up = options_.beta_corr_fact * options_.f_t / (options_.del_f * options_.meas_freq);
+  const double beta_down = -beta_up;
+  const int pad_num = options_.pad_num;
+
+  int max_range = (options_.max_range > 0) ? options_.max_range : static_cast<int>(range_bins * radar_res);
+  const int min_range_pix = options_.min_range / radar_res;
+  const int max_range_pix = max_range / radar_res;
+
+  // --- Prepare output ---
+  doppler_scan.clear();
+  doppler_scan.reserve(N);
+
+  cv::Point max_idx;
+
+  // --- Process successive azimuths ---
+  cv::Mat az_i = fft_data.row(0).colRange(min_range_pix, max_range_pix).clone();
+  cen_filter(az_i, options_.sigma_gauss, options_.z_q);
+  for (int i = 0; i < N - 1; ++i) {
+    cv::Mat az_i1 = fft_data.row(i + 1).colRange(min_range_pix, max_range_pix).clone();
+    cen_filter(az_i1, options_.sigma_gauss, options_.z_q);
+
+    if (cv::countNonZero(az_i) == 0 || cv::countNonZero(az_i1) == 0)
+      continue;
+
+    cv::Mat az_i1_padded = cv::Mat::zeros(1, az_i.cols + 2 * pad_num, CV_32F);
+    az_i1.copyTo(az_i1_padded.colRange(pad_num, pad_num + az_i.cols));
+
+    cv::Mat corr;
+    cv::matchTemplate(az_i, az_i1_padded, corr, cv::TM_CCORR_NORMED);
+    cv::minMaxLoc(corr, nullptr, nullptr, nullptr, &max_idx);
+
+    const double del_r = (max_idx.x - pad_num) / 2.0;
+    double u_val = del_r * radar_res / (chirps[i] ? beta_up : beta_down);
+    if (std::abs(u_val) > options_.max_velocity)
+      continue;
+
+    double u_az = (azimuths[i] + azimuths[i + 1]) / 2.0;
+    int64_t u_time = static_cast<int64_t>(((timestamps[i] + timestamps[i + 1]) / 2.0));
+
+    doppler_scan.push_back({u_val, u_time, u_az, i});
+    az_i = std::move(az_i1);
+  }
+}
+
+void DopplerExtractor::ransac_scan(DopplerScan& doppler_scan,
+                                   const Eigen::Vector2d& prior_model) const {
+  if (doppler_scan.size() < 2) {
+    std::cerr << "[RANSAC] Not enough points to fit model.\n";
+    return;
+  }
+
+  const int N = static_cast<int>(doppler_scan.size());
+  Eigen::MatrixXd A(N, 2);
+  Eigen::VectorXd b(N);
+
+  for (int i = 0; i < N; ++i) {
+    b(i) = doppler_scan[i].radial_velocity;
+    A(i, 0) = std::cos(doppler_scan[i].azimuth);
+    A(i, 1) = std::sin(doppler_scan[i].azimuth);
+  }
+
+  static thread_local std::mt19937 rng(99);
+  std::uniform_int_distribution<int> dist(0, N - 1);
+
+  int best_inliers = 0;
+  Eigen::Vector2d best_model = prior_model;
+  std::vector<int> best_mask(N, 0);
+
+  for (int iter = 0; iter < options_.ransac_max_iter; ++iter) {
+    int i1 = dist(rng), i2 = dist(rng);
+    while (i2 == i1) i2 = dist(rng);
+
+    Eigen::Matrix2d A_sample;
+    Eigen::Vector2d b_sample;
+    A_sample << A.row(i1), A.row(i2);
+    b_sample << b(i1), b(i2);
+
+    Eigen::Vector2d model = A_sample.colPivHouseholderQr().solve(b_sample);
+
+    if ((model - prior_model).norm() > options_.ransac_prior_threshold)
+      continue;
+
+    Eigen::VectorXd residuals = A * model - b;
+    std::vector<int> mask(N, 0);
+    int num_inliers = 0;
+
+    for (int i = 0; i < N; ++i) {
+      if (std::abs(residuals(i)) < options_.ransac_threshold) {
+        mask[i] = 1;
+        ++num_inliers;
+      }
+    }
+
+    if (num_inliers > best_inliers) {
+      best_inliers = num_inliers;
+      best_mask = mask;
+      best_model = model;
+    }
+  }
+
+  if (best_inliers < 10) {
+    std::cerr << "[RANSAC] Too few inliers, using prior model.\n";
+    best_model = prior_model;
+  }
+
+  DopplerScan filtered;
+  filtered.reserve(N);
+  for (int i = 0; i < N; ++i)
+    if (best_mask[i]) filtered.push_back(doppler_scan[i]);
+
+  doppler_scan.swap(filtered);
+}
+
+void DopplerExtractor::cen_filter(cv::Mat& signal, int sigma_gauss, int z_q) const {
+  if (signal.empty()) return;
+
+  // Subtract mean
+  cv::Scalar mean_val = cv::mean(signal);
+  cv::Mat q = signal - mean_val[0];
+
+  // Build Gaussian kernel
+  int fsize = std::max(3, sigma_gauss * 6 | 1);  // ensure odd size
+  cv::Mat kernel = cv::getGaussianKernel(fsize, sigma_gauss, CV_32F).t();
+
+  // Apply Gaussian filter
+  cv::Mat p;
+  cv::filter2D(q, p, -1, kernel, cv::Point(-1, -1), 0, cv::BORDER_REFLECT101);
+
+  // Estimate noise sigma
+  double sigma_q = 0;
+  int count = 0;
+  for (int i = 0; i < q.cols; ++i) {
+    float v = q.at<float>(0, i);
+    if (v < 0) {
+      sigma_q += 2.0 * v * v;
+      ++count;
+    }
+  }
+  sigma_q = (count > 0) ? 0.1 * std::sqrt(sigma_q / count) : 0.034;
+  const double threshold = z_q * sigma_q;
+
+  // Compute adaptive weighting
+  cv::Mat pow_p, pow_qp, npp, nqp;
+  cv::pow(p / sigma_q, 2, pow_p);
+  cv::pow((q - p) / sigma_q, 2, pow_qp);
+  cv::exp(-0.5 * pow_p, npp);
+  cv::exp(-0.5 * pow_qp, nqp);
+
+  cv::Mat y = q.mul(1 - nqp) + p.mul(nqp - npp);
+  cv::Mat mask = (y > threshold);
+  mask.convertTo(mask, CV_32F, 1.0 / 255.0);
+  signal = y.mul(mask);
+}
+
+}  // namespace srd::extractor
