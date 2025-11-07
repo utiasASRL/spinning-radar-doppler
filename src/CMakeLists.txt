@@ -3,6 +3,7 @@ add_library(spinning_radar_doppler
     utils/radar.cpp
     utils/imu.cpp
     extractor/doppler_extractor.cpp
+    extractor/doppler_config.cpp
 )
 
 target_include_directories(spinning_radar_doppler PUBLIC
@@ -16,6 +17,7 @@ target_link_libraries(spinning_radar_doppler
         Eigen3::Eigen
         ${OpenCV_LIBS}
         lgmath
+        yaml-cpp
 )
 
 target_compile_features(spinning_radar_doppler PUBLIC cxx_std_17)

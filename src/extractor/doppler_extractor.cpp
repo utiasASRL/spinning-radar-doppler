@@ -45,6 +45,7 @@ void DopplerExtractor::extract_doppler(
   cv::Point max_idx;
 
   // --- Process successive azimuths ---
+  // TOOD: Change cv:Mat to cv:Mat1f
   cv::Mat az_i = fft_data.row(0).colRange(min_range_pix, max_range_pix).clone();
   cen_filter(az_i, options_.sigma_gauss, options_.z_q);
   for (int i = 0; i < N - 1; ++i) {
@@ -74,75 +75,6 @@ void DopplerExtractor::extract_doppler(
   }
 }
 
-void DopplerExtractor::ransac_scan(DopplerScan& doppler_scan,
-                                   const Eigen::Vector2d& prior_model) const {
-  if (doppler_scan.size() < 2) {
-    std::cerr << "[RANSAC] Not enough points to fit model.\n";
-    return;
-  }
-
-  const int N = static_cast<int>(doppler_scan.size());
-  Eigen::MatrixXd A(N, 2);
-  Eigen::VectorXd b(N);
-
-  for (int i = 0; i < N; ++i) {
-    b(i) = doppler_scan[i].radial_velocity;
-    A(i, 0) = std::cos(doppler_scan[i].azimuth);
-    A(i, 1) = std::sin(doppler_scan[i].azimuth);
-  }
-
-  static thread_local std::mt19937 rng(99);
-  std::uniform_int_distribution<int> dist(0, N - 1);
-
-  int best_inliers = 0;
-  Eigen::Vector2d best_model = prior_model;
-  std::vector<int> best_mask(N, 0);
-
-  for (int iter = 0; iter < options_.ransac_max_iter; ++iter) {
-    int i1 = dist(rng), i2 = dist(rng);
-    while (i2 == i1) i2 = dist(rng);
-
-    Eigen::Matrix2d A_sample;
-    Eigen::Vector2d b_sample;
-    A_sample << A.row(i1), A.row(i2);
-    b_sample << b(i1), b(i2);
-
-    Eigen::Vector2d model = A_sample.colPivHouseholderQr().solve(b_sample);
-
-    if ((model - prior_model).norm() > options_.ransac_prior_threshold)
-      continue;
-
-    Eigen::VectorXd residuals = A * model - b;
-    std::vector<int> mask(N, 0);
-    int num_inliers = 0;
-
-    for (int i = 0; i < N; ++i) {
-      if (std::abs(residuals(i)) < options_.ransac_threshold) {
-        mask[i] = 1;
-        ++num_inliers;
-      }
-    }
-
-    if (num_inliers > best_inliers) {
-      best_inliers = num_inliers;
-      best_mask = mask;
-      best_model = model;
-    }
-  }
-
-  if (best_inliers < 10) {
-    std::cerr << "[RANSAC] Too few inliers, using prior model.\n";
-    best_model = prior_model;
-  }
-
-  DopplerScan filtered;
-  filtered.reserve(N);
-  for (int i = 0; i < N; ++i)
-    if (best_mask[i]) filtered.push_back(doppler_scan[i]);
-
-  doppler_scan.swap(filtered);
-}
-
 void DopplerExtractor::cen_filter(cv::Mat& signal, int sigma_gauss, int z_q) const {
   if (signal.empty()) return;
 
@@ -151,6 +83,7 @@ void DopplerExtractor::cen_filter(cv::Mat& signal, int sigma_gauss, int z_q) con
   cv::Mat q = signal - mean_val[0];
 
   // Build Gaussian kernel
+  // TODO: Move this to constructor since it's fixed
   int fsize = std::max(3, sigma_gauss * 6 | 1);  // ensure odd size
   cv::Mat kernel = cv::getGaussianKernel(fsize, sigma_gauss, CV_32F).t();
 
@@ -182,6 +115,143 @@ void DopplerExtractor::cen_filter(cv::Mat& signal, int sigma_gauss, int z_q) con
   cv::Mat mask = (y > threshold);
   mask.convertTo(mask, CV_32F, 1.0 / 255.0);
   signal = y.mul(mask);
+}
+
+void DopplerExtractor::ransac_scan(DopplerScan& doppler_scan,
+                                  std::optional<Eigen::Vector2d> prior_model) const {
+  if (doppler_scan.size() < 2) {
+    std::cerr << "[RANSAC] Not enough points to fit model.\n";
+    return;
+  }
+
+  const int N = static_cast<int>(doppler_scan.size());
+  Eigen::MatrixXd A(N, 2);
+  Eigen::VectorXd b(N);
+
+  for (int i = 0; i < N; ++i) {
+    b(i) = doppler_scan[i].radial_velocity;
+    A(i, 0) = std::cos(doppler_scan[i].azimuth);
+    A(i, 1) = std::sin(doppler_scan[i].azimuth);
+  }
+
+  static thread_local std::mt19937 rng(99);
+  std::uniform_int_distribution<int> dist(0, N - 1);
+
+  int best_inliers = 0;
+  bool use_prior = prior_model.has_value();
+  Eigen::Vector2d prior_model_val = prior_model.value_or(Eigen::Vector2d::Zero());
+  Eigen::Vector2d best_model = prior_model_val;
+  std::vector<int> best_mask(N, 0);
+
+  for (int iter = 0; iter < options_.ransac_max_iter; ++iter) {
+    int i1 = dist(rng), i2 = dist(rng);
+    while (i2 == i1) i2 = dist(rng);
+
+    Eigen::Matrix2d A_sample;
+    Eigen::Vector2d b_sample;
+    A_sample << A.row(i1), A.row(i2);
+    b_sample << b(i1), b(i2);
+
+    Eigen::Vector2d model = A_sample.colPivHouseholderQr().solve(b_sample);
+
+    if (use_prior && (model - prior_model_val).norm() > options_.ransac_prior_threshold)
+      continue;
+
+    Eigen::VectorXd residuals = A * model - b;
+    std::vector<int> mask(N, 0);
+    int num_inliers = 0;
+
+    for (int i = 0; i < N; ++i) {
+      if (std::abs(residuals(i)) < options_.ransac_threshold) {
+        mask[i] = 1;
+        ++num_inliers;
+      }
+    }
+
+    if (num_inliers > best_inliers) {
+      best_inliers = num_inliers;
+      best_mask = mask;
+      best_model = model;
+    }
+  }
+
+  if (best_inliers < 10) {
+    std::cerr << "[RANSAC] Too few inliers, using prior model.\n";
+    best_model = prior_model_val;
+  }
+
+  DopplerScan filtered;
+  filtered.reserve(N);
+  for (int i = 0; i < N; ++i)
+    if (best_mask[i]) filtered.push_back(doppler_scan[i]);
+
+  doppler_scan.swap(filtered);
+}
+
+Eigen::Vector2d DopplerExtractor::register_scan(const DopplerScan &doppler_scan,
+  std::optional<Eigen::Vector2d> varpi_prior) const {
+  // Load in parameters for easy reference
+  int num_meas = doppler_scan.size();
+
+  // Initialize doppler measurement residual and A/b matrices for least squares
+  Eigen::VectorXd residuals = Eigen::VectorXd::Zero(num_meas);
+  Eigen::MatrixXd A = Eigen::MatrixXd::Zero(num_meas, 2);
+  Eigen::VectorXd b = Eigen::VectorXd::Zero(num_meas);
+  // Fill in A and b matrices (these will be constant throughout iterations)
+  for (int i = 0; i < num_meas; ++i) {
+    double azimuth = doppler_scan[i].azimuth;
+    A(i, 0) = std::cos(azimuth);
+    A(i, 1) = std::sin(azimuth);
+    b(i) = doppler_scan[i].radial_velocity;
+  }
+
+  // Initialize variables for least squares
+  Eigen::VectorXd w_inv_diag = Eigen::VectorXd::Ones(num_meas);
+  Eigen::VectorXd cauchy_w = Eigen::VectorXd::Ones(num_meas);
+  Eigen::VectorXd varpi_prev = Eigen::VectorXd::Zero(2);
+  Eigen::VectorXd varpi_curr = Eigen::VectorXd::Zero(2);
+  Eigen::MatrixXd lhs = Eigen::MatrixXd::Zero(2, 2);
+  Eigen::VectorXd rhs = Eigen::VectorXd::Zero(2);
+
+  // Load in initial guess to be used for the first iteration
+  bool prior_provided = varpi_prior.has_value();
+  if (prior_provided) {
+    varpi_prev = varpi_prior.value();
+    varpi_curr = varpi_prior.value();
+  } else {
+    // Start from zero velocity if no prior provided
+    varpi_prev = Eigen::Vector2d::Zero();
+    varpi_curr = Eigen::Vector2d::Zero();
+  }
+
+  // run least squares on Ax = b
+  for (int iter = 0; iter < options_.opt_max_iter; ++iter) {
+    // compute new cauchy weights
+    residuals = A * varpi_curr - b;
+    cauchy_w = 1.0 / (1.0 + ( residuals.array() / options_.cauchy_rho ).square());
+    w_inv_diag = cauchy_w.array();
+
+    lhs = A.transpose() * w_inv_diag.asDiagonal() * A;
+    rhs = A.transpose() * w_inv_diag.asDiagonal() * b;
+
+    // solve
+    varpi_prev = varpi_curr;
+    varpi_curr = lhs.inverse() * rhs;
+    
+    // Check for convergence
+    if ((varpi_curr - varpi_prev).norm() < options_.opt_threshold) {
+      break;
+    }
+  }
+
+  // Only correct bias in x if we're confident we're moving
+  // This bias is calibrated only for x_vel > 0.2
+  if (std::abs(varpi_curr(0)) > 0.2) {
+    varpi_curr(0) = varpi_curr(0) + varpi_curr(0) * options_.x_bias_slope + options_.x_bias_intercept;
+  }
+  varpi_curr(1) = varpi_curr(1) + varpi_curr(1) * options_.y_bias_slope + options_.y_bias_intercept;
+
+  return varpi_curr;
 }
 
 }  // namespace srd::extractor
