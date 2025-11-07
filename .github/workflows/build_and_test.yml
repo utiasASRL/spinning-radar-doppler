@@ -1,0 +1,52 @@
+name: Build and test
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential \
+          cmake \
+          libeigen3-dev \
+          libopencv-dev \
+          libyaml-cpp-dev \
+          git \
+          libgtest-dev
+
+    - name: Install GoogleTest
+      run: |
+        cd /usr/src/googletest/googletest
+        sudo cmake .
+        sudo make
+        sudo cp lib/*.a /usr/lib/
+
+    - name: Clone and build lgmath
+      run: |
+        mkdir -p ~/workspace/lgmath
+        cd ~/workspace/lgmath
+        git clone https://github.com/utiasASRL/lgmath.git .
+        mkdir -p build && cd build
+        cmake ..
+        cmake --build . --parallel
+        sudo cmake --install .
+
+    - name: Configure CMake
+      run: cmake -S . -B build
+
+    - name: Build
+      run: cmake --build build --parallel
+
+    - name: Run unit tests
+      run: ctest --test-dir build --output-on-failure

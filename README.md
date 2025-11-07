@@ -1,3 +1,5 @@
+![Tests](https://github.com/utiasASRL/spinning-radar-doppler/actions/workflows/build_and_test.yml/badge.svg)
+
 # spinning-radar-doppler
 Code to extract and process Doppler measurements from a spinning radar sensor.
 
