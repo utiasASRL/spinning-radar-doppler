@@ -1,9 +1,7 @@
 radar:
   radar_res: 0.04381 # m/pixel, radar resolution
-  # radar_res: 0.155 # m/pixel, radar resolution
   f_t: 76.04E9    # Hz, start frequency ramp
   meas_freq: 1600 # Hz, number of measurements per second
-  # meas_freq: 800 # Hz, number of measurements per second
   del_f: 893.0E6  # Hz, frequency span during ramp
 
 imu:
@@ -15,6 +13,7 @@ extraction:
     max_range: 200  # m, maximum range of signal to use in cross-correlation
     beta_corr_fact: 0.944 # _, correction factor for beta
     pad_num: 100     # _, number of zeros to pad the signal with
+    max_vel: 30.0  # m/s, maximum velocity before deeming Doppler extraction invalid
 
   filter:
     sigma_gauss: 15.0 # _, standard deviation of Gaussian filter
