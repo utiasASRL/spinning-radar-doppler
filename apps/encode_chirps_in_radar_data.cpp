@@ -19,15 +19,27 @@ namespace utils = srd::utils;
 
 int main(int argc, char** argv)
 {
-    if (argc < 4) {
+    bool verbose = false;
+    std::vector<std::string> positional;
+
+    for (int i = 1; i < argc; ++i) {
+        std::string arg = argv[i];
+        if (arg == "--verbose") {
+            verbose = true;
+        } else {
+            positional.push_back(arg);
+        }
+    }
+
+    if (positional.size() < 3) {
         std::cerr << "Usage:\n"
-                  << "  encode_chirps_in_radar_data <input_dir> <output_dir> <config.yaml>\n";
+                  << "  encode_chirps_in_radar_data [--verbose] <input_dir> <output_dir> <config.yaml>\n";
         return 1;
     }
 
-    const fs::path input_dir = argv[1];
-    const fs::path output_dir = argv[2];
-    const fs::path config_path = argv[3];
+    const fs::path input_dir  = positional[0];
+    const fs::path output_dir = positional[1];
+    const fs::path config_path = positional[2];
 
     std::cout << "Input directory:  " << input_dir << "\n"
               << "Output directory: " << output_dir << "\n"
@@ -53,8 +65,6 @@ int main(int argc, char** argv)
     auto opts = srd::extractor::load_doppler_options(config);
     srd::extractor::DopplerExtractor extractor(opts);
 
-    std::cout << "Loaded Doppler extractor configuration.\n\n";
-
     // Working buffers
     std::vector<int64_t> timestamps;
     std::vector<double> azimuths;
@@ -63,12 +73,12 @@ int main(int argc, char** argv)
     bool up_are_even = true;
     int stable_motion_frames = 0;
     int frame_idx = 0;
-
+    std::cout << "Processing radar scans...\n";
     for (const auto& file : radar_files) {
         const int64_t timestamp = utils::get_stamp_from_path(file.string());
         cv::Mat scan = cv::imread(file.string(), cv::IMREAD_GRAYSCALE);
 
-        std::cout << "Frame " << frame_idx << ": timestamp = " << timestamp << "\n";
+        if (verbose) std::cout << "Frame " << frame_idx << ": timestamp = " << timestamp << "\n";
 
         std::vector<bool> raw_chirps;
         utils::load_radar(scan, timestamps, azimuths, raw_chirps, fft_data);
@@ -90,12 +100,12 @@ int main(int argc, char** argv)
 
         extractor.ransac_scan(doppler_scan);
         if (doppler_scan.size() < 10) {
-            std::cerr << "Insufficient Doppler points. Stopping.\n";
+            std::cerr << "Insufficient Doppler points at frame " << frame_idx << ". Stopping.\n";
             break;
         }
 
         Eigen::Vector2d v_est = extractor.register_scan(doppler_scan);
-        std::cout << "Estimated velocity: (" << v_est[0] << ", " << v_est[1] << ")\n";
+        if (verbose) std::cout << "Estimated velocity: (" << v_est[0] << ", " << v_est[1] << ")\n";
 
         // Adapt chirp orientation based on forward velocity sign
         // This assumes that the radar is only moving forward!!
@@ -103,11 +113,11 @@ int main(int argc, char** argv)
         if (std::abs(v_est[0]) > 1.0) {
             stable_motion_frames++;
             if (v_est[0] < 0.0) {
-                std::cout << "\033[1;31mChirp flip detected at frame " << frame_idx << "\033[0m\n";
+                if (verbose) std::cout << "\033[1;31mChirp flip detected at frame " << frame_idx << "\033[0m\n";
                 up_are_even = !up_are_even;
 
                 if (stable_motion_frames < 10) {
-                    std::cout << "Reprocessing from beginning (start-of-motion ambiguity).\n\n";
+                    if (verbose) std::cout << "Reprocessing from beginning (start-of-motion ambiguity).\n\n";
                     stable_motion_frames = 0;
                     frame_idx = 0;
                     continue;
