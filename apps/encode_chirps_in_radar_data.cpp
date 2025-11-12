@@ -88,12 +88,6 @@ int main(int argc, char** argv)
         for (size_t i = 0; i < chirps.size(); i++)
             chirps[i] = (i % 2 == 0) ? up_are_even : !up_are_even;
 
-        // Synthesize timestamps evenly over ±0.125s span
-        const int64_t start_time = timestamp - 125000;
-        const int64_t time_step = 250000 / static_cast<int64_t>(azimuths.size());
-        for (size_t i = 0; i < timestamps.size(); i++)
-            timestamps[i] = start_time + i * time_step;
-
         // Extract Doppler measurements
         DopplerScan doppler_scan;
         extractor.extract_doppler(fft_data, azimuths, timestamps, chirps, doppler_scan);
