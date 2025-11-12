@@ -1,11 +1,23 @@
 #!/bin/bash
-# Script to encode chirp direction in the 10th byte of the raw radar data.
-# Data is read in from a provided sequence path and an updated version is output
-# either in-place (if --overwrite_input is set) or at the same level
-# but under a folder called 'doppler_radar' otherwise. Additionally takes a
-# --verbose flag to enable detailed logging inside the C++ app.
-# Config file is read from ../config/doppler_config.yaml.
-# ASSUMPTION: The radar is only moving forward!
+# -----------------------------------------------------------------------------
+# Script: encode_chirps_in_radar_data.sh
+#
+# Description:
+#   Encodes the chirp direction into the 10th byte of raw radar data.
+#
+# Behavior:
+#   - Reads radar data from a provided sequence path.
+#   - Outputs either:
+#       • In-place (if --overwrite_input is set), OR
+#       • To a sibling folder named 'doppler_radar' (default).
+#   - Optionally enables detailed logging via the --verbose flag.
+#
+# Configuration:
+#   Reads settings from ../config/doppler_config.yaml.
+#
+# Assumptions:
+#   The radar is only moving forward.
+# -----------------------------------------------------------------------------
 
 set -euo pipefail # Exit on errors, unset variables are errors, catch errors in pipes
 
