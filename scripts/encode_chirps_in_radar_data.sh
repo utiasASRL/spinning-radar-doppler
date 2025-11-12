@@ -1,3 +1,11 @@
+#!/bin/bash
+
+# Script to encode chirp direction in the 10th byte of the raw radar data.
+# Data is read in from a provided sequence path and output at the same level
+# but under a folder called 'doppler_radar'. Config file is read from
+# ../config/doppler_config.yaml.
+# ASSUMPTION: The radar is only moving forward!
+
 if [ "$#" -ne 1 ]; then
     echo "Usage: ./encode_chirps_in_radar_data.sh <sequence_path>"
     exit 1

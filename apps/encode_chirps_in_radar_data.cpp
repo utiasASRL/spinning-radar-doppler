@@ -98,6 +98,8 @@ int main(int argc, char** argv)
         std::cout << "Estimated velocity: (" << v_est[0] << ", " << v_est[1] << ")\n";
 
         // Adapt chirp orientation based on forward velocity sign
+        // This assumes that the radar is only moving forward!!
+        // TODO: Maybe move this assumption to config?
         if (std::abs(v_est[0]) > 1.0) {
             stable_motion_frames++;
             if (v_est[0] < 0.0) {
