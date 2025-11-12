@@ -19,6 +19,7 @@ DopplerExtractor::Options load_doppler_options(const YAML::Node& config) {
     if (signal["max_range"]) opts.max_range = signal["max_range"].as<double>();
     if (signal["beta_corr_fact"]) opts.beta_corr_fact = signal["beta_corr_fact"].as<double>();
     if (signal["pad_num"]) opts.pad_num = signal["pad_num"].as<int>();
+    if (signal["max_vel"]) opts.max_velocity = signal["max_vel"].as<double>();
   }
 
   auto filter = config["extraction"]["filter"];
