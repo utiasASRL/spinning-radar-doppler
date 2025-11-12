@@ -33,7 +33,7 @@ int main(int argc, char** argv)
 
     if (positional.size() < 3) {
         std::cerr << "Usage:\n"
-                  << "  encode_chirps_in_radar_data [--verbose] <input_dir> <output_dir> <config.yaml>\n";
+                  << "./encode_chirps_in_radar_data [--verbose] <input_dir> <output_dir> <config.yaml>\n";
         return 1;
     }
 
