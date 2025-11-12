@@ -50,3 +50,10 @@ git clone git@github.com:utiasASRL/spinning-radar-doppler.git
 # build and install
 bash scripts/build_package.sh
 ```
+
+## Applications
+
+The Doppler extractor is meant to be installed and used in other projects. However, some common applications are provided locally for development, processing, and visualization purposes.
+They are all contained under the `apps` directory with pre-packaged uses contained in the `scripts` directory.
+The `scripts` directory contains both direct application calls and combinations of application calls that together server some other purpose.
+Each script contains a description of its purpose at the top.
