@@ -3,7 +3,7 @@ add_library(spinning_radar_doppler
     utils/radar.cpp
     utils/imu.cpp
     extractor/doppler_extractor.cpp
-    extractor/doppler_config.cpp
+    extractor/extractor_config.cpp
 )
 
 target_include_directories(spinning_radar_doppler PUBLIC

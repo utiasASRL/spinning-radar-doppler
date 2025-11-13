@@ -13,7 +13,7 @@
 #   - Optionally enables detailed logging via the --verbose flag.
 #
 # Configuration:
-#   Reads settings from ../config/doppler_config.yaml.
+#   Reads settings from ../config/extractor_config.yaml.
 #
 # Assumptions:
 #   The radar is only moving forward.
@@ -70,7 +70,7 @@ fi
 INPUT_PATH="$(realpath "$SEQUENCE_PATH")"
 SCRIPT_PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_PATH="$(realpath "$SCRIPT_PATH/..")"
-CONFIG_PATH="$PROJECT_PATH/config/doppler_config.yaml"
+CONFIG_PATH="$PROJECT_PATH/config/extractor_config.yaml"
 BUILD_PATH="$PROJECT_PATH/build"
 CURR_PATH="$(pwd)"
 

@@ -67,7 +67,7 @@ fi
 INPUT_PATH="$(realpath "$SEQUENCE_PATH")"
 SCRIPT_PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_PATH="$(realpath "$SCRIPT_PATH/..")"
-CONFIG_PATH="$PROJECT_PATH/config/doppler_config.yaml"
+CONFIG_PATH="$PROJECT_PATH/config/extractor_config.yaml"
 BUILD_PATH="$PROJECT_PATH/build"
 PYTHON_SCRIPT="$PROJECT_PATH/python/generate_video_from_csv.py"
 OUTPUT_PATH="$INPUT_PATH"  # save video in same directory

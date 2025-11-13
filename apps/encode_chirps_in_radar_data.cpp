@@ -11,7 +11,7 @@
 #include "lgmath.hpp"
 #include "srd/utils/radar.hpp"
 #include "srd/extractor/doppler_extractor.hpp"
-#include "srd/extractor/doppler_config.hpp"
+#include "srd/extractor/extractor_config.hpp"
 
 using srd::common::DopplerScan;
 namespace fs = std::filesystem;

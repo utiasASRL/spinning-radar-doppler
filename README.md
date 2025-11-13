@@ -30,8 +30,7 @@ sudo apt -q -y install build-essential cmake libomp-dev libyaml-cpp-dev
 sudo apt -q -y install libeigen3-dev
 
 # OR from source
-WORKSPACE=~/workspace  # choose your own workspace directory
-mkdir -p ${WORKSPACE}/eigen && cd $_
+# Navigate to your desired workspace
 git clone https://gitlab.com/libeigen/eigen.git . && git checkout 3.3.7
 mkdir build && cd $_
 cmake .. && make install # default install location is /usr/local/
@@ -77,7 +76,7 @@ DATA_PATH=your/data/here
 bash scripts/encode_chirps_in_radar_data.sh --overwrite_input $DATA_PATH
 ```
 
-Make sure to update the radar parameters in the `config/doppler_config.yaml` file to match your radar hardware.
+Make sure to update the radar parameters in the `config/extractor_config.yaml` file to match your radar hardware.
 
 ### Visualizing Doppler Velocities
 
@@ -85,5 +84,5 @@ Once you have radar data with an encoded chirp type in the 10th byte of the imag
 This CSV can then be used for other purposes, but a Python-based visualization script is included.
 To run both parts together, the `scripts/generate_doppler_velocity_video.sh` script is provided. Detailsa about the script can be found at the top of the file.
 
-Make sure to set/tune all relevant parameters in the `config/doppler_config.yaml` config file.
+Make sure to set/tune all relevant parameters in the `config/extractor_config.yaml` config file.
 Additionally, ensure that the Python virtual environment is created by running `bash scripts/create_venv.sh`.

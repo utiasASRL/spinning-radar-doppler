@@ -1,4 +1,4 @@
-#include "srd/extractor/doppler_config.hpp"
+#include "srd/extractor/extractor_config.hpp"
 
 namespace srd::extractor {
 
