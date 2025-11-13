@@ -142,6 +142,7 @@ void DopplerExtractor::ransac_scan(DopplerScan& doppler_scan,
   Eigen::Vector2d prior_model_val = prior_model.value_or(Eigen::Vector2d::Zero());
   Eigen::Vector2d best_model = prior_model_val;
   std::vector<int> best_mask(N, 0);
+  std::vector<int> mask(N, 0);
 
   for (int iter = 0; iter < options_.ransac_max_iter; ++iter) {
     int i1 = dist(rng), i2 = dist(rng);
@@ -149,7 +150,8 @@ void DopplerExtractor::ransac_scan(DopplerScan& doppler_scan,
 
     Eigen::Matrix2d A_sample;
     Eigen::Vector2d b_sample;
-    A_sample << A.row(i1), A.row(i2);
+    A_sample.row(0) = A.row(i1);
+    A_sample.row(1) = A.row(i2);
     b_sample << b(i1), b(i2);
 
     Eigen::Vector2d model = A_sample.colPivHouseholderQr().solve(b_sample);
@@ -158,7 +160,7 @@ void DopplerExtractor::ransac_scan(DopplerScan& doppler_scan,
       continue;
 
     Eigen::VectorXd residuals = A * model - b;
-    std::vector<int> mask(N, 0);
+    mask.assign(N, 0);
     int num_inliers = 0;
 
     for (int i = 0; i < N; ++i) {

@@ -13,7 +13,12 @@ DopplerExtractor::Options load_extractor_options(const YAML::Node& config) {
     if (radar["del_f"]) opts.del_f = radar["del_f"].as<long double>();
   }
 
-  auto signal = config["extraction"]["signal"];
+  const auto extraction = config["extraction"];
+  const auto signal = extraction["signal"];
+  const auto filter = extraction["filter"];
+  const auto ransac = extraction["ransac"];
+  const auto vel = extraction["velocity"];
+
   if (signal) {
     if (signal["min_range"]) opts.min_range = signal["min_range"].as<double>();
     if (signal["max_range"]) opts.max_range = signal["max_range"].as<double>();
@@ -22,20 +27,17 @@ DopplerExtractor::Options load_extractor_options(const YAML::Node& config) {
     if (signal["max_vel"]) opts.max_velocity = signal["max_vel"].as<double>();
   }
 
-  auto filter = config["extraction"]["filter"];
   if (filter) {
     if (filter["sigma_gauss"]) opts.sigma_gauss = filter["sigma_gauss"].as<double>();
     if (filter["z_q"]) opts.z_q = filter["z_q"].as<double>();
   }
 
-  auto ransac = config["extraction"]["ransac"];
   if (ransac) {
     if (ransac["max_iter"]) opts.ransac_max_iter = ransac["max_iter"].as<int>();
     if (ransac["threshold"]) opts.ransac_threshold = ransac["threshold"].as<double>();
     if (ransac["prior_threshold"]) opts.ransac_prior_threshold = ransac["prior_threshold"].as<double>();
   }
 
-  auto velocity = config["extraction"]["velocity"];
   if (velocity) {
     if (velocity["max_iter"]) opts.opt_max_iter = velocity["max_iter"].as<int>();
     if (velocity["threshold"]) opts.opt_threshold = velocity["threshold"].as<double>();

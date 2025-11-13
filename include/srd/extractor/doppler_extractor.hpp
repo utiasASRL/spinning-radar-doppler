@@ -22,14 +22,14 @@ class DopplerExtractor {
     long double del_f = 893.0e6;    // Hz
 
     // Doppler extraction parameters
-    int min_range = 5;              // meters
-    int max_range = 150;            // meters
+    double min_range = 5;              // meters
+    double max_range = 150;            // meters
     double beta_corr_fact = 0.954;  // m/s
     int pad_num = 50;
     double max_velocity = 50.0;     // m/s
     // Filtering parameters
-    int sigma_gauss = 17;
-    int z_q = 2.5;
+    double sigma_gauss = 17;
+    double z_q = 2.5;
     // Ransac parameters
     int ransac_max_iter = 100;
     double ransac_threshold = 6.0;
