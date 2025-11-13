@@ -17,7 +17,7 @@ DopplerExtractor::Options load_extractor_options(const YAML::Node& config) {
   const auto signal = extraction["signal"];
   const auto filter = extraction["filter"];
   const auto ransac = extraction["ransac"];
-  const auto vel = extraction["velocity"];
+  const auto velocity = extraction["velocity"];
 
   if (signal) {
     if (signal["min_range"]) opts.min_range = signal["min_range"].as<double>();
