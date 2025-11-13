@@ -26,3 +26,41 @@ if(SRD_BUILD_TESTS)
     enable_testing()
     add_subdirectory(tests)
 endif()
+
+# ---- Install + Export ----
+include(GNUInstallDirs)
+
+# Install the library
+install(
+    TARGETS spinning_radar_doppler
+    EXPORT spinning_radar_dopplerTargets
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+)
+
+# Install public headers (the entire include/ folder)
+install(
+    DIRECTORY include/
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+)
+
+# Export the CMake target
+install(
+    EXPORT spinning_radar_dopplerTargets
+    FILE spinning_radar_dopplerTargets.cmake
+    NAMESPACE srd::
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/spinning_radar_doppler
+)
+
+include(CMakePackageConfigHelpers)
+
+configure_package_config_file(
+    cmake/spinning_radar_dopplerConfig.cmake.in
+    ${CMAKE_CURRENT_BINARY_DIR}/spinning_radar_dopplerConfig.cmake
+    INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/spinning_radar_doppler
+)
+
+install(
+    FILES ${CMAKE_CURRENT_BINARY_DIR}/spinning_radar_dopplerConfig.cmake
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/spinning_radar_doppler
+)
