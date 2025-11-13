@@ -9,4 +9,4 @@ fi
 cd $BUILD_DIR
 
 cmake ..
-cmake -DCMAKE_BUILD_TYPE=Release .. && make -j4
+cmake -DCMAKE_BUILD_TYPE=Release .. -DSRD_BUILD_TESTS=ON -DSRD_BUILD_APPS=ON && make -j4

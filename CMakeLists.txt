@@ -11,9 +11,14 @@ find_package(Eigen3 REQUIRED)
 find_package(OpenCV REQUIRED)
 find_package(yaml-cpp REQUIRED)
 
-# ---- Subdirectories ----
+# ---- Library ----
 add_subdirectory(src)
-add_subdirectory(apps)
+
+# ---- Optional Applications ----
+option(SRD_BUILD_APPS "Build SRD command-line applications" OFF)
+if(SRD_BUILD_APPS)
+    add_subdirectory(apps)
+endif()
 
 # ---- Optional Tests ----
 option(SRD_BUILD_TESTS "Build SRD test suite" OFF)

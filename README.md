@@ -46,6 +46,8 @@ git clone git@github.com:utiasASRL/spinning-radar-doppler.git
 bash scripts/build_package.sh
 ```
 
+Note that this script builds both applications and tests by default. If using this package in an external project, remove the corresponding `-DSRD_BUILD_TESTS=ON -DSRD_BUILD_APPS=ON` flags to only build the core library.
+
 If Python visualization tools are desired, create a virtual environment by running
 
 ```bash

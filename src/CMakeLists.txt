@@ -1,13 +1,16 @@
+# src/CMakeLists.txt
+
 add_library(spinning_radar_doppler
     utils/radar.cpp
     extractor/doppler_extractor.cpp
     extractor/extractor_config.cpp
 )
 
-target_include_directories(spinning_radar_doppler PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../include>
-    $<INSTALL_INTERFACE:include>
-    ${OpenCV_INCLUDE_DIRS}
+target_include_directories(spinning_radar_doppler
+    PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../include>
+        $<INSTALL_INTERFACE:include>
+        ${OpenCV_INCLUDE_DIRS}
 )
 
 target_link_libraries(spinning_radar_doppler
