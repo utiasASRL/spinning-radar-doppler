@@ -8,4 +8,5 @@ fi
 
 cd $BUILD_DIR
 
+cmake ..
 cmake -DCMAKE_BUILD_TYPE=Release .. && make -j4

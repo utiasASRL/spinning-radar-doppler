@@ -4,7 +4,6 @@
 // Provides access to all commonly used types and functions.
 
 #include "srd/common/doppler_azimuth.hpp"
-#include "srd/utils/stopwatch.hpp"
 #include "srd/utils/utils.hpp"
 
 namespace srd {
