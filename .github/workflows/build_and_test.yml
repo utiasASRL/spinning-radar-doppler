@@ -33,7 +33,7 @@ jobs:
         sudo cp lib/*.a /usr/lib/
 
     - name: Configure CMake
-      run: cmake -S . -B build
+      run: cmake -S . -B build -DSRD_BUILD_TESTS=ON
 
     - name: Build
       run: cmake --build build --parallel
