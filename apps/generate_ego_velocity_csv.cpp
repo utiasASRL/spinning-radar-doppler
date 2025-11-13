@@ -81,7 +81,7 @@ int main(int argc, char** argv)
         std::cout << "Removed existing output file.\n";
     }
   } else {
-    std::cout << "CSV saving disabled (--no_save).\n";
+    std::cout << "CSV saving disabled (--no_save).\n\n";
   }
 
 
