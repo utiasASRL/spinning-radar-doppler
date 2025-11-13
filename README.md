@@ -14,7 +14,6 @@ Each image has a name corresponding to the unix timestamp at which it was collec
 - Compiler with C++17 support
 - CMake (>=3.16)
 - Eigen (>=3.3.7)
-- [lgmath (>=1.1.0)](https://github.com/utiasASRL/lgmath.git)
 - Python3 (if Python visualizations are desired)
 
 ### Install c++ compiler, cmake, and yaml support
@@ -37,10 +36,6 @@ cmake .. && make install # default install location is /usr/local/
 ```
 
 - Note: if installed from source to a custom location then make sure `cmake` can find it.
-
-### Install lgmath
-
-Follow the instructions [here](https://github.com/utiasASRL/lgmath.git).
 
 ### Build and install spinning-radar-doppler
 

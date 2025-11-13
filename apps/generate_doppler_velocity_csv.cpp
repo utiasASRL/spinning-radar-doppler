@@ -9,7 +9,6 @@
 #include <Eigen/Dense>
 #include <yaml-cpp/yaml.h>
 
-#include "lgmath.hpp"
 #include "srd/utils/radar.hpp"
 #include "srd/extractor/doppler_extractor.hpp"
 #include "srd/extractor/extractor_config.hpp"

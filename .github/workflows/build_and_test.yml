@@ -32,16 +32,6 @@ jobs:
         sudo make
         sudo cp lib/*.a /usr/lib/
 
-    - name: Clone and build lgmath
-      run: |
-        mkdir -p ~/workspace/lgmath
-        cd ~/workspace/lgmath
-        git clone https://github.com/utiasASRL/lgmath.git .
-        mkdir -p build && cd build
-        cmake ..
-        cmake --build . --parallel
-        sudo cmake --install .
-
     - name: Configure CMake
       run: cmake -S . -B build
 

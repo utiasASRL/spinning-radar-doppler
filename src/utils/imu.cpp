@@ -1,6 +1,5 @@
 #include "srd/utils/imu.hpp"
 #include "srd/utils/math.hpp"
-#include "lgmath.hpp"
 
 #include <opencv2/core/eigen.hpp>
 #include <filesystem>
@@ -57,8 +56,8 @@ double preintegrate_gyro(const std::vector<Eigen::Vector4d>& imu_measurements,
     }
 
     // Extract integrated yaw from final rotation
-    // Minus sign because lgmath returns xi_ab from C_ab
-    return -lgmath::so3::rot2vec(C_y).z();
+    const auto C_y_2d = C_y.block<2,2>(0,0);
+    return atan2(C_y_2d(0, 1), C_y_2d(0, 0));
 }
 
 Eigen::Vector4d get_imu_measurement(const std::vector<Eigen::Vector4d>& imu_measurements,

@@ -4,7 +4,6 @@ project(spinning_radar_doppler LANGUAGES CXX)
 # ---- Core dependencies ----
 find_package(Eigen3 REQUIRED)
 find_package(OpenCV REQUIRED)
-find_package(lgmath REQUIRED)
 find_package(yaml-cpp REQUIRED)
 
 # ---- Subdirectories ----

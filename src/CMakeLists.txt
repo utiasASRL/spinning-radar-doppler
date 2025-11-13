@@ -16,7 +16,6 @@ target_link_libraries(spinning_radar_doppler
     PUBLIC
         Eigen3::Eigen
         ${OpenCV_LIBS}
-        lgmath
         yaml-cpp
 )
 
