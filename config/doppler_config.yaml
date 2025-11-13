@@ -1,0 +1,39 @@
+radar:
+  radar_res: 0.04381 # m/pixel, radar resolution
+  # radar_res: 0.155 # m/pixel, radar resolution
+  f_t: 76.04E9    # Hz, start frequency ramp
+  meas_freq: 1600 # Hz, number of measurements per second
+  # meas_freq: 800 # Hz, number of measurements per second
+  del_f: 893.0E6  # Hz, frequency span during ramp
+
+extraction:
+  signal:
+    min_range: 4    # m, minimum range of signal to use in cross-correlation
+    max_range: 200  # m, maximum range of signal to use in cross-correlation
+    beta_corr_fact: 0.944 # _, correction factor for beta
+    pad_num: 100     # _, number of zeros to pad the signal with
+    max_vel: 30.0  # m/s, maximum velocity before deeming Doppler extraction invalid
+
+  filter:
+    sigma_gauss: 15.0 # _, standard deviation of Gaussian filter
+    z_q: 2.5       # _, threshold for Cen2018 detector
+
+  ransac:
+    max_iter: 100
+    threshold: 6.0
+    prior_threshold: 6.0
+  
+  velocity:
+    max_iter: 100
+    threshold: 1.0E-6
+    cauchy_rho: 0.8
+    x_bias_slope: -0.009 # m/s, slope of the bias correction in x direction
+    x_bias_intercept: 0.10 # m/s, intercept of the bias correction in x direction
+    y_bias_slope: 0.046 # m/s, slope of the bias correction in y direction
+    y_bias_intercept: -0.11 # m/s, intercept of the bias correction in y direction
+
+filter:
+  imu_file_name: dmu_imu.csv
+  v_0: [0.0, 0.0]  # m/s, initial condition for velocity
+  v_0_std: [0.1, 0.1]  # m/s, standard deviation of initial condition for velocity
+  wnoa_std: [1.0, 0.5]  # m/s, standard deviation of white noise on accleleration assumption
