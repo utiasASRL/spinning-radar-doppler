@@ -1,9 +1,11 @@
 add_library(spinning_radar_doppler
+    extractor/doppler_extractor.cpp
+    extractor/extractor_config.cpp
+    odometry/doppler_odometry.cpp
+    odometry/odometry_config.cpp
     utils/math.cpp
     utils/radar.cpp
     utils/imu.cpp
-    extractor/doppler_extractor.cpp
-    extractor/extractor_config.cpp
 )
 
 target_include_directories(spinning_radar_doppler PUBLIC
