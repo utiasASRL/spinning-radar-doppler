@@ -1,0 +1,21 @@
+<package format="3">
+  <name>spinning_radar_doppler</name>
+  <version>0.1.0</version>
+  <description>Doppler extraction for spinning radar</description>
+
+  <maintainer email="daniil.lisus@robotics.utias.utoronto.ca">Daniil Lisus</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>cmake</buildtool_depend>
+
+  <build_depend>eigen3_cmake_module</build_depend>
+  <build_depend>eigen3</build_depend>
+  <build_depend>opencv</build_depend>
+
+  <exec_depend>eigen3</exec_depend>
+  <exec_depend>opencv</exec_depend>
+
+  <export>
+    <build_type>cmake</build_type>
+  </export>
+</package>
