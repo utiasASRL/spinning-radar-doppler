@@ -1,40 +1,30 @@
-# pragma once
-
-#include <opencv2/core.hpp>
-#include <Eigen/Dense>
+#pragma once
 #include <memory>
+#include <Eigen/Dense>
 #include <vector>
+
 #include "srd/common/common.hpp"
-#include "srd/extractor/doppler_extractor.hpp"
-#include <optional>
+#include "srd/odometry/trajectory.hpp"
 
 namespace srd::odometry {
 
 class DopplerOdometry {
  public:
-  using Ptr = std::shared_ptr<DopplerOdometry>;
-  using ConstPtr = std::shared_ptr<const DopplerOdometry>;
-
   struct Options {
-    // Initial condition for the vehicle velocity [vx, vy] (m/s)
-    Eigen::Vector2d v_0 = Eigen::Vector2d(0.0, 0.0);
-    // Standard deviation for the initial condition on velocity (m/s)
-    Eigen::Vector2d v_0_std = Eigen::Vector2d(0.1, 0.1);
-    // Standard deviation for the white noise on acceleration assumption (m/s^2)
-    Eigen::Vector2d wnoa_std = Eigen::Vector2d(0.1, 0.1);
-
-    // IMU file name
-    std::string imu_file_name = "";
+    Eigen::Vector2d v_0{0.0, 0.0};
+    Eigen::Vector2d v_0_std{0.1, 0.1};
+    Eigen::Vector2d wnoa_std{0.1, 0.1};
+    std::string imu_file_name;
   };
 
   DopplerOdometry();
   explicit DopplerOdometry(const Options& options);
 
-  void compute_odometry(const std::vector<DopplerScan>& doppler_scans,
-                        std::vector<Eigen::Matrix4d>& poses) const;
+  void progress_odometry(const DopplerScan& scan, int64_t timestamp);
 
  private:
   Options options_;
+  Trajectory trajectory_;
 };
 
 } // namespace srd::odometry
