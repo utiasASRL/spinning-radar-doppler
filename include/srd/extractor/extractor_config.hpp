@@ -5,6 +5,6 @@
 
 namespace srd::extractor {
 
-DopplerExtractor::Options load_doppler_options(const YAML::Node& config);
+DopplerExtractor::Options load_extractor_options(const YAML::Node& config);
 
 } // namespace srd::extractor

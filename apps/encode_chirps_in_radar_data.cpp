@@ -62,7 +62,7 @@ int main(int argc, char** argv)
 
     // Load config + construct extractor
     YAML::Node config = YAML::LoadFile(config_path);
-    auto opts = srd::extractor::load_doppler_options(config);
+    auto opts = srd::extractor::load_extractor_options(config);
     srd::extractor::DopplerExtractor extractor(opts);
 
     // Working buffers
