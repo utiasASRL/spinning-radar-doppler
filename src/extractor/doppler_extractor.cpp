@@ -8,9 +8,27 @@
 
 namespace srd::extractor {
 
-DopplerExtractor::DopplerExtractor() : options_() {}
+DopplerExtractor::DopplerExtractor() : options_() {
+  init_gaussian_kernel();
+}
 
-DopplerExtractor::DopplerExtractor(const Options& options) : options_(options) {}
+DopplerExtractor::DopplerExtractor(const Options& options) : options_(options) {
+  init_gaussian_kernel();
+}
+
+void DopplerExtractor::init_gaussian_kernel() {
+  // Make sure sigma is sensible, throw error if not
+  int sigma = options_.sigma_gauss;
+  if (sigma <= 0) {
+    throw std::invalid_argument("[DopplerExtractor] sigma_gauss must be positive.");
+  }
+
+  // ensure odd window size, at least 3
+  int fsize = std::max(3, (sigma * 6) | 1);
+
+  gauss_kernel_ = cv::getGaussianKernel(fsize, sigma, CV_32F).t();
+}
+
 
 void DopplerExtractor::extract_doppler(
     const cv::Mat& fft_data,
@@ -35,33 +53,35 @@ void DopplerExtractor::extract_doppler(
   const double beta_up = options_.beta_corr_fact * options_.f_t / (options_.del_f * options_.meas_freq);
   const double beta_down = -beta_up;
   const int pad_num = options_.pad_num;
-
   int max_range = (options_.max_range > 0) ? options_.max_range : static_cast<int>(range_bins * radar_res);
   const int min_range_pix = options_.min_range / radar_res;
   const int max_range_pix = max_range / radar_res;
 
-  // --- Prepare output ---
+  // --- Prepare reusable variables ---
   doppler_scan.clear();
   doppler_scan.reserve(N);
-
+  int W = max_range_pix - min_range_pix;
+  cv::Mat az_i(1, W, CV_32F);
+  cv::Mat az_i1(1, W, CV_32F);
+  cv::Mat padded(1, W + 2 * pad_num, CV_32F);
+  cv::Mat corr(1, W + pad_num * 2 - W + 1, CV_32F);
   cv::Point max_idx;
 
   // --- Process successive azimuths ---
   // TOOD: Change cv:Mat to cv:Mat1f
-  cv::Mat az_i = fft_data.row(0).colRange(min_range_pix, max_range_pix).clone();
-  cen_filter(az_i, options_.sigma_gauss, options_.z_q);
+  fft_data.row(0).colRange(min_range_pix, max_range_pix).copyTo(az_i);
+  cen_filter(az_i, options_.z_q);
   for (int i = 0; i < N - 1; ++i) {
-    cv::Mat az_i1 = fft_data.row(i + 1).colRange(min_range_pix, max_range_pix).clone();
-    cen_filter(az_i1, options_.sigma_gauss, options_.z_q);
+    fft_data.row(i+1).colRange(min_range_pix, max_range_pix).copyTo(az_i1);
+    cen_filter(az_i1, options_.z_q);
 
     if (cv::countNonZero(az_i) == 0 || cv::countNonZero(az_i1) == 0)
       continue;
 
-    cv::Mat az_i1_padded = cv::Mat::zeros(1, az_i.cols + 2 * pad_num, CV_32F);
-    az_i1.copyTo(az_i1_padded.colRange(pad_num, pad_num + az_i.cols));
+    padded.setTo(0);
+    az_i1.copyTo(padded.colRange(pad_num, pad_num + az_i.cols));
 
-    cv::Mat corr;
-    cv::matchTemplate(az_i, az_i1_padded, corr, cv::TM_CCORR_NORMED);
+    cv::matchTemplate(az_i, padded, corr, cv::TM_CCORR_NORMED);
     cv::minMaxLoc(corr, nullptr, nullptr, nullptr, &max_idx);
 
     const double del_r = (max_idx.x - pad_num) / 2.0;
@@ -77,27 +97,23 @@ void DopplerExtractor::extract_doppler(
   }
 }
 
-void DopplerExtractor::cen_filter(cv::Mat& signal, int sigma_gauss, int z_q) const {
+void DopplerExtractor::cen_filter(cv::Mat& signal, int z_q) const {
   if (signal.empty()) return;
 
   // Subtract mean
   cv::Scalar mean_val = cv::mean(signal);
   cv::Mat q = signal - mean_val[0];
 
-  // Build Gaussian kernel
-  // TODO: Move this to constructor since it's fixed
-  int fsize = std::max(3, sigma_gauss * 6 | 1);  // ensure odd size
-  cv::Mat kernel = cv::getGaussianKernel(fsize, sigma_gauss, CV_32F).t();
-
   // Apply Gaussian filter
   cv::Mat p;
-  cv::filter2D(q, p, -1, kernel, cv::Point(-1, -1), 0, cv::BORDER_REFLECT101);
+  cv::filter2D(q, p, -1, gauss_kernel_, cv::Point(-1,-1), 0, cv::BORDER_REFLECT101);
 
   // Estimate noise sigma
   double sigma_q = 0;
   int count = 0;
+  const float* qptr = q.ptr<float>();
   for (int i = 0; i < q.cols; ++i) {
-    float v = q.at<float>(0, i);
+    float v = qptr[i];
     if (v < 0) {
       sigma_q += 2.0 * v * v;
       ++count;
