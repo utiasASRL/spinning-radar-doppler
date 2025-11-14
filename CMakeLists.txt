@@ -5,8 +5,13 @@ project(spinning_radar_doppler VERSION 0.1.0 LANGUAGES CXX)
 #   Detect ROS2 / colcon (ament) build
 # ============================================================
 find_package(ament_cmake QUIET)
+if ((NOT ament_cmake_FOUND) OR (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT))
+    set(AMENT_CMAKE_BUILD_MODE OFF)
+else()
+    set(AMENT_CMAKE_BUILD_MODE ON)
+endif()
 
-if ((ament_cmake_FOUND) OR (NOT CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT))
+if (AMENT_CMAKE_BUILD_MODE)
     message(STATUS "Building spinning_radar_doppler in ROS2/ament mode")
 
     # ROS dependency discovery
