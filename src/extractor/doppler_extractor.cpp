@@ -3,6 +3,8 @@
 #include <random>
 #include <numeric>
 #include <iostream>
+#include <cmath>
+#include <algorithm>
 
 namespace srd::extractor {
 
