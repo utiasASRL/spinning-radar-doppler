@@ -4,10 +4,12 @@
 #include <Eigen/Dense>
 #include <memory>
 #include <vector>
-#include "srd/common/common.hpp"
+#include "srd/common/doppler_types.hpp"
 #include <optional>
 
 namespace srd::extractor {
+
+using srd::common::DopplerScan;
 
 class DopplerExtractor {
  public:
