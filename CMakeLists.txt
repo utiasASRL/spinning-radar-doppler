@@ -6,50 +6,49 @@ project(spinning_radar_doppler VERSION 0.1.0 LANGUAGES CXX)
 # ============================================================
 find_package(ament_cmake QUIET)
 
-if(ament_cmake_FOUND)
-    message(STATUS "Building spinning_radar_doppler in ROS2/colcon mode")
+if ((ament_cmake_FOUND) OR (NOT CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT))
+    message(STATUS "Building spinning_radar_doppler in ROS2/ament mode")
 
-    # --- ROS-compatible dependency discovery ---
+    # ROS dependency discovery
     find_package(eigen3_cmake_module REQUIRED)
     find_package(Eigen3 REQUIRED)
-    find_package(yaml-cpp REQUIRED)
     find_package(OpenCV REQUIRED)
+    find_package(yaml-cpp REQUIRED)
 
-    # --- Build library ---
+    # Build the library
     add_subdirectory(src)
 
-    # --- Tests (ament handles BUILD_TESTING automatically) ---
+    # Export alias
+    add_library(srd::core ALIAS spinning_radar_doppler)
+
+    # Install headers
+    install(DIRECTORY include/
+      DESTINATION include
+    )
+
+    # Install + export library (AMENT STYLE)
+    install(
+      TARGETS spinning_radar_doppler
+      EXPORT export_${PROJECT_NAME}
+      LIBRARY DESTINATION lib
+      ARCHIVE DESTINATION lib
+      RUNTIME DESTINATION lib/${PROJECT_NAME}
+      INCLUDES DESTINATION include
+    )
+
+    # Export to ROS2
+    ament_export_targets(export_${PROJECT_NAME} HAS_LIBRARY_TARGET)
+    ament_export_dependencies(Eigen3 OpenCV yaml-cpp)
+
+    # Tests
     if(BUILD_TESTING)
         find_package(ament_cmake_gtest REQUIRED)
         add_subdirectory(tests)
     endif()
 
-    # --- Install headers ---
-    install(
-        DIRECTORY include/
-        DESTINATION include
-    )
-
-    # --- Install + export library ---
-    install(
-        TARGETS spinning_radar_doppler
-        EXPORT export_${PROJECT_NAME}
-        LIBRARY DESTINATION lib
-        ARCHIVE DESTINATION lib
-        RUNTIME DESTINATION lib/${PROJECT_NAME}
-        INCLUDES DESTINATION include
-    )
-
-    # --- Export to ROS2 ---
-    ament_export_targets(export_${PROJECT_NAME} HAS_LIBRARY_TARGET)
-    ament_export_dependencies(Eigen3 yaml-cpp OpenCV)
-
-    # Finalize ROS2 package
     ament_package()
-
-    return()  # ⬅ IMPORTANT: skip the normal CMake flow
+    return()
 endif()
-
 
 # ============================================================
 #   Normal (non-ROS) CMake flow
