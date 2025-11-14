@@ -89,15 +89,7 @@ int main(int argc, char** argv)
 
         // Extract Doppler measurements
         DopplerScan doppler_scan;
-        extractor.extract_doppler(fft_data, azimuths, timestamps, chirps, doppler_scan);
-
-        extractor.ransac_scan(doppler_scan);
-        if (doppler_scan.size() < 10) {
-            std::cerr << "Insufficient Doppler points at frame " << frame_idx << ". Stopping.\n";
-            break;
-        }
-
-        Eigen::Vector2d v_est = extractor.register_scan(doppler_scan);
+        Eigen::Vector2d v_est = extractor.get_ego_velocity(fft_data, azimuths, timestamps, chirps, /*use_ransac=*/ true, doppler_scan);
         if (verbose) std::cout << "Estimated velocity: (" << v_est[0] << ", " << v_est[1] << ")\n";
 
         // Adapt chirp orientation based on forward velocity sign

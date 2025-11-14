@@ -256,4 +256,16 @@ Eigen::Vector2d DopplerExtractor::register_scan(const DopplerScan &doppler_scan,
   return varpi_curr;
 }
 
+
+Eigen::Vector2d DopplerExtractor::get_ego_velocity(const cv::Mat& fft_data,
+                       const std::vector<double>& azimuths,
+                       const std::vector<int64_t>& timestamps,
+                       const std::vector<bool>& chirps,
+                       const bool use_ransac,
+                       DopplerScan& doppler_scan) const {
+  extract_doppler(fft_data, azimuths, timestamps, chirps, doppler_scan);
+  if (use_ransac) ransac_scan(doppler_scan);
+  return register_scan(doppler_scan);
+}
+
 }  // namespace srd::extractor

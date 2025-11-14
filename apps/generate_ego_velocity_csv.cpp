@@ -121,13 +121,9 @@ int main(int argc, char** argv)
       std::vector<bool> up_chirps;
       utils::load_radar(scan, timestamps, azimuths, up_chirps, fft_data);
 
-      // Extract Doppler measurements
-      DopplerScan doppler_scan;
-      extractor.extract_doppler(fft_data, azimuths, timestamps, up_chirps, doppler_scan);
-      if (use_ransac) extractor.ransac_scan(doppler_scan);
-
       // Extract ego velocity
-      Eigen::Vector2d velocity = extractor.register_scan(doppler_scan);
+      DopplerScan doppler_scan;
+      Eigen::Vector2d velocity = extractor.get_ego_velocity(fft_data, azimuths, timestamps, up_chirps, use_ransac, doppler_scan);
       if (verbose) std::cout << "Estimated ego velocity: [" << velocity[0] << ", " << velocity[1] << "] m/s\n";
 
       // Write to CSV

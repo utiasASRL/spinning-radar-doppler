@@ -62,6 +62,14 @@ class DopplerExtractor {
   Eigen::Vector2d register_scan(const DopplerScan &doppler_scan,
                                 std::optional<Eigen::Vector2d> varpi_prior = std::nullopt) const;
 
+  // Combined method to get ego velocity from FFT data directly
+  Eigen::Vector2d get_ego_velocity(const cv::Mat& fft_data,
+                       const std::vector<double>& azimuths,
+                       const std::vector<int64_t>& timestamps,
+                       const std::vector<bool>& chirps,
+                       const bool use_ransac,
+                       DopplerScan& doppler_scan) const;
+
  private:
   Options options_;
 };
