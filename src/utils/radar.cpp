@@ -1,6 +1,5 @@
 #include "srd/utils/radar.hpp"
 #include <filesystem>
-#include <string>
 #include <cmath>
 #include <stdexcept>
 
@@ -16,7 +15,6 @@ void load_radar(const cv::Mat& raw_data,
     }
 
     const double encoder_conversion = 2.0 * M_PI / 5600.0;
-    const int64_t time_convert = 1;  // placeholder (adjust if scaling timestamps)
     const uint32_t N = raw_data.rows;
     const uint32_t M = raw_data.cols;
 
@@ -29,9 +27,13 @@ void load_radar(const cv::Mat& raw_data,
 
     for (uint32_t i = 0; i < N; ++i) {
         const uchar* row_data = raw_data.ptr<uchar>(i);
-        timestamps[i] = *reinterpret_cast<const int64_t*>(row_data) * time_convert;
-        azimuths[i] = *reinterpret_cast<const uint16_t*>(row_data + 8) * encoder_conversion;
-        up_chirps[i] = *(row_data + 10);
+        int64_t ts;
+        std::memcpy(&ts, row_data, sizeof(int64_t));
+        timestamps[i] = ts;
+        uint16_t az;
+        std::memcpy(&az, row_data + 8, sizeof(uint16_t));
+        azimuths[i] = az * encoder_conversion;
+        up_chirps[i] = static_cast<bool>(row_data[10]);
 
         float* fft_row = fft_data.ptr<float>(i);
         for (uint32_t j = 0; j < range_bins; ++j) {
