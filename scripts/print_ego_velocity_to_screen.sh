@@ -8,7 +8,7 @@
 #
 # Behavior:
 #   - Reads radar data from the provided input path.
-#   - Saves the generated video in the same directory as the input data.
+#   - Prints the estimated ego-velocity to the screen.
 #
 # Assumptions:
 #   Input radar data includes chirp-type metadata.
@@ -51,7 +51,7 @@ if [ ! -f "$CONFIG_PATH" ]; then
     exit 1
 fi
 
-# --- Step 1: Generate Doppler velocities CSV ---
+# --- Generate ego-velocities CSV ---
 cd "$BUILD_PATH"
 CSV_PATH="$OUTPUT_PATH/doppler_velocities.csv"
 echo "Running velocity estimation..."
@@ -59,4 +59,4 @@ echo "Running velocity estimation..."
 
 # --- Done ---
 cd "$CURR_PATH"
-echo "✅ Doppler velocity video generated successfully at: $OUTPUT_PATH"
+echo "✅ Ego-velocity succesfully printed"
