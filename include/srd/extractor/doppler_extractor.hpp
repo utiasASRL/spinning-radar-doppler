@@ -56,7 +56,7 @@ class DopplerExtractor {
                        const std::vector<int64_t>& timestamps,
                        const std::vector<bool>& chirps,
                        DopplerScan& doppler_scan) const;
-  void cen_filter(cv::Mat& signal, int z_q) const;
+  void cen_filter(cv::Mat& signal, double sigma_gauss, double z_q) const;
 
   void ransac_scan(DopplerScan& doppler_scan,
                    std::optional<Eigen::Vector2d> prior_model = std::nullopt) const;
@@ -74,8 +74,6 @@ class DopplerExtractor {
 
  private:
   Options options_;
-  cv::Mat gauss_kernel_; // Precomputed Gaussian kernel for filtering
-  void init_gaussian_kernel();
 };
 
 }  // namespace srd::extractor

@@ -8,27 +8,9 @@
 
 namespace srd::extractor {
 
-DopplerExtractor::DopplerExtractor() : options_() {
-  init_gaussian_kernel();
-}
+DopplerExtractor::DopplerExtractor() : options_() {}
 
-DopplerExtractor::DopplerExtractor(const Options& options) : options_(options) {
-  init_gaussian_kernel();
-}
-
-void DopplerExtractor::init_gaussian_kernel() {
-  // Make sure sigma is sensible, throw error if not
-  int sigma = options_.sigma_gauss;
-  if (sigma <= 0) {
-    throw std::invalid_argument("[DopplerExtractor] sigma_gauss must be positive.");
-  }
-
-  // ensure odd window size, at least 3
-  int fsize = std::max(3, (sigma * 6) | 1);
-
-  gauss_kernel_ = cv::getGaussianKernel(fsize, sigma, CV_32F).t();
-}
-
+DopplerExtractor::DopplerExtractor(const Options& options) : options_(options) {}
 
 void DopplerExtractor::extract_doppler(
     const cv::Mat& fft_data,
@@ -53,7 +35,7 @@ void DopplerExtractor::extract_doppler(
   const double beta_up = options_.beta_corr_fact * options_.f_t / (options_.del_f * options_.meas_freq);
   const double beta_down = -beta_up;
   const int pad_num = options_.pad_num;
-  int max_range = (options_.max_range > 0) ? options_.max_range : static_cast<int>(range_bins * radar_res);
+  double max_range = (options_.max_range > 0) ? options_.max_range : static_cast<int>(range_bins * radar_res);
   const int min_range_pix = options_.min_range / radar_res;
   const int max_range_pix = max_range / radar_res;
 
@@ -70,13 +52,15 @@ void DopplerExtractor::extract_doppler(
   // --- Process successive azimuths ---
   // TOOD: Change cv:Mat to cv:Mat1f
   fft_data.row(0).colRange(min_range_pix, max_range_pix).copyTo(az_i);
-  cen_filter(az_i, options_.z_q);
+  cen_filter(az_i, options_.sigma_gauss, options_.z_q);
   for (int i = 0; i < N - 1; ++i) {
     fft_data.row(i+1).colRange(min_range_pix, max_range_pix).copyTo(az_i1);
-    cen_filter(az_i1, options_.z_q);
+    cen_filter(az_i1, options_.sigma_gauss, options_.z_q);
 
-    if (cv::countNonZero(az_i) == 0 || cv::countNonZero(az_i1) == 0)
+    if (cv::countNonZero(az_i) == 0 || cv::countNonZero(az_i1) == 0) {
+      az_i = std::move(az_i1);
       continue;
+    }
 
     padded.setTo(0);
     az_i1.copyTo(padded.colRange(pad_num, pad_num + az_i.cols));
@@ -86,8 +70,10 @@ void DopplerExtractor::extract_doppler(
 
     const double del_r = (max_idx.x - pad_num) / 2.0;
     double u_val = del_r * radar_res / (chirps[i] ? beta_up : beta_down);
-    if (std::abs(u_val) > options_.max_velocity)
+    if (std::abs(u_val) > options_.max_velocity) {
+      az_i = std::move(az_i1);
       continue;
+    }
 
     double u_az = (azimuths[i] + azimuths[i + 1]) / 2.0;
     int64_t u_time = static_cast<int64_t>(((timestamps[i] + timestamps[i + 1]) / 2.0));
@@ -97,7 +83,7 @@ void DopplerExtractor::extract_doppler(
   }
 }
 
-void DopplerExtractor::cen_filter(cv::Mat& signal, int z_q) const {
+void DopplerExtractor::cen_filter(cv::Mat& signal, double sigma_gauss, double z_q) const {
   if (signal.empty()) return;
 
   // Subtract mean
@@ -105,8 +91,19 @@ void DopplerExtractor::cen_filter(cv::Mat& signal, int z_q) const {
   cv::Mat q = signal - mean_val[0];
 
   // Apply Gaussian filter
+  int fsize = sigma_gauss * 2 * 3;
+  if (fsize % 2 == 0) fsize += 1;
+  const int mu = fsize / 2;
+  const float sig_sqr = sigma_gauss * sigma_gauss;
+  cv::Mat filter = cv::Mat::zeros(1, fsize, CV_32F);
+  float s = 0;
+  for (int i = 0; i < fsize; ++i) {
+      filter.at<float>(0, i) = exp(-0.5 * (i - mu) * (i - mu) / sig_sqr);
+      s += filter.at<float>(0, i);
+  }
+  filter /= s;
   cv::Mat p;
-  cv::filter2D(q, p, -1, gauss_kernel_, cv::Point(-1,-1), 0, cv::BORDER_REFLECT101);
+  cv::filter2D(q, p, -1, filter, cv::Point(-1, -1), 0, cv::BORDER_REFLECT101);
 
   // Estimate noise sigma
   double sigma_q = 0;
@@ -142,7 +139,7 @@ void DopplerExtractor::ransac_scan(DopplerScan& doppler_scan,
     return;
   }
 
-  const int N = static_cast<int>(doppler_scan.size());
+  const int N = doppler_scan.size();
   Eigen::MatrixXd A(N, 2);
   Eigen::VectorXd b(N);
 
@@ -172,7 +169,7 @@ void DopplerExtractor::ransac_scan(DopplerScan& doppler_scan,
     A_sample.row(1) = A.row(i2);
     b_sample << b(i1), b(i2);
 
-    Eigen::Vector2d model = A_sample.colPivHouseholderQr().solve(b_sample);
+    Eigen::Vector2d model = A_sample.inverse() * b_sample;
 
     if (use_prior && (model - prior_model_val).norm() > options_.ransac_prior_threshold)
       continue;
@@ -228,10 +225,10 @@ Eigen::Vector2d DopplerExtractor::register_scan(const DopplerScan &doppler_scan,
   // Initialize variables for least squares
   Eigen::VectorXd w_inv_diag = Eigen::VectorXd::Ones(num_meas);
   Eigen::VectorXd cauchy_w = Eigen::VectorXd::Ones(num_meas);
-  Eigen::VectorXd varpi_prev = Eigen::VectorXd::Zero(2);
-  Eigen::VectorXd varpi_curr = Eigen::VectorXd::Zero(2);
-  Eigen::MatrixXd lhs = Eigen::MatrixXd::Zero(2, 2);
-  Eigen::VectorXd rhs = Eigen::VectorXd::Zero(2);
+  Eigen::Vector2d varpi_prev = Eigen::Vector2d::Zero();
+  Eigen::Vector2d varpi_curr = Eigen::Vector2d::Zero();
+  Eigen::Matrix2d lhs = Eigen::Matrix2d::Zero();
+  Eigen::Vector2d rhs = Eigen::Vector2d::Zero();
 
   // Load in initial guess to be used for the first iteration
   bool prior_provided = varpi_prior.has_value();
@@ -266,10 +263,11 @@ Eigen::Vector2d DopplerExtractor::register_scan(const DopplerScan &doppler_scan,
 
   // Only correct bias in x if we're confident we're moving
   // This bias is calibrated only for x_vel > 0.2
+  varpi_prev = varpi_curr;
   if (std::abs(varpi_curr(0)) > 0.2) {
-    varpi_curr(0) = varpi_curr(0) + varpi_curr(0) * options_.x_bias_slope + options_.x_bias_intercept;
+    varpi_curr(0) = varpi_prev(0) + varpi_prev(0) * options_.x_bias_slope + options_.x_bias_intercept;
   }
-  varpi_curr(1) = varpi_curr(1) + varpi_curr(1) * options_.y_bias_slope + options_.y_bias_intercept;
+  varpi_curr(1) = varpi_prev(1) + varpi_prev(1) * options_.y_bias_slope + options_.y_bias_intercept;
 
   return varpi_curr;
 }
