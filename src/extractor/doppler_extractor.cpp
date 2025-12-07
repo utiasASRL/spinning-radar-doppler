@@ -193,8 +193,9 @@ void DopplerExtractor::ransac_scan(DopplerScan& doppler_scan,
   }
 
   if (best_inliers < 10) {
-    std::cerr << "[RANSAC] Too few inliers, using prior model.\n";
+    std::cerr << "[RANSAC] Too few inliers, using prior model and keeping entire scan.\n";
     best_model = prior_model_val;
+    return;
   }
 
   DopplerScan filtered;
