@@ -49,6 +49,12 @@ int main(int argc, char** argv)
         std::cout << "Created output directory.\n";
     }
 
+    // Check if output dir is the same as input dir
+    bool overwriting_files = false;
+    if (fs::equivalent(input_dir, output_dir)) {
+        overwriting_files = true;
+    }
+
     // Gather radar image files (.png)
     std::vector<fs::path> radar_files;
     for (const auto& entry : fs::directory_iterator(input_dir)) {
@@ -73,14 +79,19 @@ int main(int argc, char** argv)
     int stable_motion_frames = 0;
     int frame_idx = 0;
     std::cout << "Processing radar scans...\n";
-    for (const auto& file : radar_files) {
+    while (frame_idx < radar_files.size()) {
+        const fs::path& file = radar_files[frame_idx];
         const int64_t timestamp = utils::get_stamp_from_path(file.string());
-        cv::Mat scan = cv::imread(file.string(), cv::IMREAD_GRAYSCALE);
 
         if (verbose) std::cout << "Frame " << frame_idx << ": timestamp = " << timestamp << "\n";
 
+        // Load radar data
+        cv::Mat scan = cv::imread(file.string(), cv::IMREAD_GRAYSCALE);
         std::vector<bool> raw_chirps;
         utils::load_radar(scan, timestamps, azimuths, raw_chirps, fft_data);
+
+        // Set up_are_even based on first frame
+        if (frame_idx == 0) up_are_even = raw_chirps.size() > 0 ? raw_chirps[0] : true;
 
         // Predict chirp direction pattern
         std::vector<bool> chirps(azimuths.size());
@@ -107,8 +118,22 @@ int main(int argc, char** argv)
                     frame_idx = 0;
                     continue;
                 }
-                continue;
+
+                // Recompute velocity to make sure its good
+                for (size_t i = 0; i < chirps.size(); i++)
+                    chirps[i] = (i % 2 == 0) ? up_are_even : !up_are_even;
+                if (verbose) {
+                    v_est = extractor.get_ego_velocity(fft_data, azimuths, timestamps, chirps, /*use_ransac=*/ true, doppler_scan);
+                    if (verbose) std::cout << "Recomputed estimated velocity: (" << v_est[0] << ", " << v_est[1] << ")\n";
+                }
             }
+        }
+
+        // Only save chirp info if it's different from raw_chirps that are already encoded
+        // Only valid if we're overwriting files, otherwise want to save new file always
+        if (raw_chirps == chirps && overwriting_files) {
+            frame_idx++;
+            continue;
         }
 
         // Encode chirp type into pixel channel 10
