@@ -78,6 +78,7 @@ int main(int argc, char** argv)
     bool up_are_even = true;
     int stable_motion_frames = 0;
     int frame_idx = 0;
+    bool chirp_dir_initialized = false;
     std::cout << "Processing radar scans...\n";
     while (frame_idx < radar_files.size()) {
         const fs::path& file = radar_files[frame_idx];
@@ -91,7 +92,10 @@ int main(int argc, char** argv)
         utils::load_radar(scan, timestamps, azimuths, raw_chirps, fft_data);
 
         // Set up_are_even based on first frame
-        if (frame_idx == 0) up_are_even = raw_chirps.size() > 0 ? raw_chirps[0] : true;
+        if (!chirp_dir_initialized) {
+            up_are_even = raw_chirps.size() > 0 ? raw_chirps[0] : true;
+            chirp_dir_initialized = true;
+        }
 
         // Predict chirp direction pattern
         std::vector<bool> chirps(azimuths.size());
@@ -135,6 +139,8 @@ int main(int argc, char** argv)
             frame_idx++;
             continue;
         }
+
+        std::cout << "Saving new frame encoding for frame: " << frame_idx << std::endl;
 
         // Encode chirp type into pixel channel 10
         for (size_t i = 0; i < azimuths.size(); i++)
