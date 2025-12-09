@@ -143,8 +143,6 @@ int main(int argc, char** argv)
             continue;
         }
 
-        std::cout << "Saving new frame encoding for frame: " << frame_idx << std::endl;
-
         // Encode chirp type into pixel channel 10
         for (size_t i = 0; i < azimuths.size(); i++)
             scan.at<uchar>(i, 10) = (i % 2 == 0 ? up_are_even : !up_are_even) ? 255 : 0;
