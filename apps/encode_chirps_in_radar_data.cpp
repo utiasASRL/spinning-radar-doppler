@@ -106,7 +106,10 @@ int main(int argc, char** argv)
         // Adapt chirp orientation based on forward velocity sign
         // This assumes that the radar is only moving forward!!
         // TODO: Maybe move this assumption to config?
-        if (std::abs(v_est[0]) > 1.0) {
+        double threshold_velocity = 1.0; // m/s
+        // If we've already had a stable fix, the only time that a flip can occur is at speed
+        if (stable_motion_frames > 10) threshold_velocity = 5.0;
+        if (std::abs(v_est[0]) > threshold_velocity) {
             stable_motion_frames++;
             if (v_est[0] < 0.0) {
                 if (verbose) std::cout << "\033[1;31mChirp flip detected at frame " << frame_idx << "\033[0m\n";
